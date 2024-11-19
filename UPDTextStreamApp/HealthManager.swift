@@ -30,7 +30,7 @@ class HealthManager {
     
     func startHeartRateQuery() {
         // Start the workout session
-        //startWorkoutSession()
+        //startWorkoutSession() -> can't do below iOS18
         print("Start Heart rate Query from manager started")
         // Define the heart rate type
         let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate)!
