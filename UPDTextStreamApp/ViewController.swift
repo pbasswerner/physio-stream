@@ -6,8 +6,10 @@ import UIKit
 import Network
 
 class ViewController: UIViewController, ConnectViewDelegate {
-    
+
+    private var dispatchTimer: DispatchSourceTimer?
     let connectView = ConnectView()
+    var emotionalIntensity:Float = -1.0
     
     var userInitials = "DI" //default initials -> DI
     
@@ -30,6 +32,7 @@ class ViewController: UIViewController, ConnectViewDelegate {
             connectView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             connectView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
+        
     }
     
     func setupConnection(hostString: String, portValue: Int) {
@@ -81,7 +84,7 @@ class ViewController: UIViewController, ConnectViewDelegate {
     }
     
     func sendAppraisal(emotionalIntensity: String) {
-        let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .long)
+        let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .medium)
         
         let message = "User: \(userInitials) EI: \(emotionalIntensity) Timestamp: \(timestamp)\n"
         let data = message.data(using: .utf8)
@@ -102,10 +105,21 @@ class ViewController: UIViewController, ConnectViewDelegate {
             })
         }
     }
+    
+    func updateAppraisal(emotionalIntensity: Float) {
+        self.emotionalIntensity = emotionalIntensity
+    }
 
     
     func startCollection() {
         print("start collection called")
+        onStartStreaming()
+        
+    }
+    
+    func stopCollection() {
+        print("Stop collection called")
+        onStopStreaming()
         let savedEntries = DataManager.shared.getAppraisals()
         print(savedEntries)
     }
@@ -138,168 +152,36 @@ class ViewController: UIViewController, ConnectViewDelegate {
         }
         
         // Clear saved entries after uploading
-        DataManager.shared.clearAppraisals()
+        //DataManager.shared.clearAppraisals()
     }
+    func onIntervalStreamIntensity() {
+        // Cancel any existing timer
+            dispatchTimer?.cancel()
+            
+            // Create a new DispatchSourceTimer
+            dispatchTimer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .background))
+            dispatchTimer?.schedule(deadline: .now(), repeating: 0.1) // Interval in seconds (e.g., 0.1 seconds)
+            dispatchTimer?.setEventHandler { [weak self] in
+                guard let self = self else { return }
+                
+                let sliderValue = self.emotionalIntensity
+                let intensity = String(format: "%.2f", sliderValue)
+                
+                // Call the sendAppraisal method with the slider's current value
+                self.sendAppraisal(emotionalIntensity: intensity)
+            }
+            dispatchTimer?.resume()
+       }
+    
+    func onStartStreaming() {
+          // Called when the toggle is enabled
+          onIntervalStreamIntensity()
+      }
+
+      func onStopStreaming() {
+          // Stop and cancel the timer
+              dispatchTimer?.cancel()
+              dispatchTimer = nil      }
+
 }
 
-
-//class ViewController: UIViewController, ConnectViewDelegate {
-//    
-//    let connectView = ConnectView()
-//    
-//    let healthManager = HealthManager()
-//    
-//    // HealthKit variables
-//    let healthStore = HKHealthStore()
-//    var heartRateQuery: HKAnchoredObjectQuery?
-//    
-//    //thread safe serial queue
-//    private let udpQueue = DispatchQueue(label: "com.example.udp")
-//    // Set up UDP connection
-//    var connection: NWConnection?
-//    //run command ifconfig | grep 'inet ' | awk '{print $2}' and change the host string on touch designer/python server to the second address
-//    // update the host string below accordingly 
-//    let hostString = "169.254.251.55"
-//    let portValue = 5000
-//    
-//    override func viewDidLoad() {
-//        super.viewDidLoad()
-//        
-//        view.addSubview(connectView)
-//        connectView.delegate = self
-//        
-//        // Set constraints for connect view
-//        connectView.translatesAutoresizingMaskIntoConstraints = false
-//           NSLayoutConstraint.activate([
-//            connectView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-//            connectView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-//            connectView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-//            connectView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
-//           ])
-//
-//        
-//        // Request access to health data
-//        //healthManager.requestHealthKitAccess()
-//        
-//    }
-//    
-//
-//    
-////    func setupConnection(hostString: String, portValue: Int) {
-////        let host = NWEndpoint.Host(hostString) //
-////        let port = NWEndpoint.Port(rawValue: UInt16(portValue))! //
-////        
-////        connection = NWConnection(host: host, port: port, using: .udp)
-////        connection?.stateUpdateHandler = { state in
-////            switch state {
-////            case .ready:
-////                print("Ready to send data")
-////                
-////            case .failed(let error):
-////                print("Failed with error: \(error)")
-////            default:
-////                break
-////            }
-////        }
-////        connection?.start(queue: .global())
-////        
-////    }
-//    
-//    func setupConnection(hostString: String, portValue: Int) {
-//         let host = NWEndpoint.Host(hostString)
-//         let port = NWEndpoint.Port(rawValue: UInt16(portValue))!
-//         
-//         udpQueue.async { [weak self] in
-//             self?.connection = NWConnection(host: host, port: port, using: .udp)
-//             self?.connection?.stateUpdateHandler = { state in
-//                 switch state {
-//                 case .ready:
-//                     print("Ready to send data")
-//                 case .failed(let error):
-//                     print("Failed with error: \(error)")
-//                 default:
-//                     break
-//                 }
-//             }
-//             self?.connection?.start(queue: self?.udpQueue ?? DispatchQueue.global())
-//         }
-//     }
-//
-// 
-//    
-////    func startHeartRateQuery() {
-////        print("health query started")
-////        let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate)!
-////        let query = HKAnchoredObjectQuery(type: heartRateType, predicate: nil, anchor: nil, limit: HKObjectQueryNoLimit) { (query, samples, deletedObjects, anchor, error) in
-////            self.processHeartRateSamples(samples)
-////        }
-////        
-////        query.updateHandler = { (query, samples, deletedObjects, anchor, error) in
-////            print("update handler")
-////            self.processHeartRateSamples(samples)
-////        }
-////        
-////        healthStore.execute(query)
-////        heartRateQuery = query
-////    }
-//    
-//    
-//
-////
-////    func processHeartRateSamples(_ samples: [HKSample]?) {
-////        print("process heart rate called")
-////        guard let heartRateSamples = samples as? [HKQuantitySample] else { return }
-////        
-////        for sample in heartRateSamples {
-////            let heartRateUnit = HKUnit.count().unitDivided(by: HKUnit.minute())
-////            let heartRate = sample.quantity.doubleValue(for: heartRateUnit)
-////            let timestamp = sample.startDate
-////           
-////            print("HR: \(heartRate) at \(timestamp)")
-////            sendHeartRateData(heartRate: heartRate, timestamp: timestamp, user: "user")
-////        }
-////    }
-//
-//    
-////    func sendHeartRateData(heartRate: Double, timestamp: Date, user:String) {
-////        print("send heart rate called")
-////        let heartRateString = user + " " + timestamp.description + " HR " + String(heartRate)
-////        let data = heartRateString.data(using: .utf8)
-////    
-////        connection?.send(content: data, completion: .contentProcessed { error in
-////            if let error = error {
-////                print("Error sending data: \(error)")
-////            } else {
-////                print("\(heartRateString)")
-////            }
-////        })
-////    }
-//    
-//    @objc func sendInitials(text : String) {
-//        let data = (text + "\n").data(using: .utf8)
-//        connection?.send(content: data, completion: .contentProcessed { error in
-//            if let error = error {
-//                print("Error sending data: \(error)")
-//            } else {
-//                print("Text sent: " + text)
-//            }
-//        })
-//    }
-//    func onUserClickedConnect(initials: String, ipAddress: String, port: Int) {
-//        setupConnection(hostString: self.hostString, portValue: self.portValue)
-//        sendInitials(text: initials)
-//    }
-//    
-//    func startCollection() {
-//        print("start collection called")
-//        //get timestamp of this method called
-//        //startHeartRateQuery()
-//    }
-//
-//    private func cleanupConnection() {
-//        udpQueue.async { [weak self] in
-//            self?.connection?.cancel()
-//            self?.connection = nil
-//        }
-//    }
-//}

@@ -3,14 +3,15 @@ import UIKit
 protocol ConnectViewDelegate: AnyObject{
     func onUserClickedConnect(initials: String, ipAddress: String, port: Int)
     func startCollection()
-    func sendAppraisal(emotionalIntensity: String)
-
+    func stopCollection()
+    func updateAppraisal(emotionalIntensity: Float)
+    
 }
 
 
 class ConnectView: UIView, UITextFieldDelegate {
 
-    private var lastSentValue: Int = -1
+    private var currentEmotionalIntensity: Float = -1.0
     weak var delegate: ConnectViewDelegate?
     private var debounceWorkItem: DispatchWorkItem?
     
@@ -95,6 +96,7 @@ class ConnectView: UIView, UITextFieldDelegate {
         ipInputView.isEnabled = true
         portInputView.isEnabled = true
         
+        
         // Enable/disable toggle
         enableDisableToggle(shouldEnable: false)
     }
@@ -149,19 +151,14 @@ class ConnectView: UIView, UITextFieldDelegate {
         let port = portInputView.text?.isEmpty == false ? portInputView.text! : defaultPort
 
         delegate?.onUserClickedConnect(initials: initials, ipAddress: ipAddress, port: Int(port)! )
-        collectDataSwitch.isEnabled = true
+        enableDisableToggle(shouldEnable: true)
     }
     
     @objc func onSliderValueChanged(_ slider: UISlider) {
-        let stepValue = Int(round(slider.value))
-        slider.value = Float(stepValue) // Snap slider to steps
-        intensityLabel.text = "Emotional Intensity: \(stepValue)"
         
-        // Only send if the value has changed
-        if stepValue != lastSentValue {
-            lastSentValue = stepValue
-            delegate?.sendAppraisal(emotionalIntensity: String(stepValue))
-        }
+        currentEmotionalIntensity = slider.value
+        intensityLabel.text = String(format: "Emotional Intensity: %.2f", slider.value)
+        delegate?.updateAppraisal(emotionalIntensity: slider.value)
     }
     
     @objc func onStreamToggleChanged() {
@@ -171,6 +168,7 @@ class ConnectView: UIView, UITextFieldDelegate {
             delegate?.startCollection()
         } else {
             enableDisableSlider(shouldEnable: false)
+            delegate?.stopCollection()
         }
     }
     
