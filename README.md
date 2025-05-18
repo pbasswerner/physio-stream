@@ -3,6 +3,17 @@
 LiveFeel is a demo system that visualizes audience emotional responses during live performances in real time. It streams emotional intensity data via a mobile app and renders it visually using TouchDesigner to enhance synchrony between performers and audiences.
 
 ---
+## 📽️ Demo Video
+
+🎥 [Watch the Demo on Google Drive](https://drive.google.com/file/d/1BZu-OeAn8KMWSIRsTtF8JNkD97Yl97E-/view?usp=sharing)
+
+---
+
+## 🖼️ Presentation Slides
+
+📊 [View the Google Slides Presentation](https://docs.google.com/presentation/d/16oaQyTHS0l7Gc6x26TAGTm7QqnUzbtkgo_8m58yyCOU/edit?usp=sharing)
+
+---
 
 ## 📽️ Demo Video
   
